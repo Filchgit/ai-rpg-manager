@@ -24,10 +24,10 @@ test.describe('Campaign Management Flow', () => {
     )
 
     // And I submit the form
-    await page.click('button:has-text("Create Campaign")')
+    await page.click('button[type="submit"]:has-text("Create Campaign")')
 
     // Then I should see the new campaign in the list
-    await expect(page.locator('text=Test Campaign')).toBeVisible()
+    await expect(page.locator('text=Test Campaign').first()).toBeVisible()
   })
 
   test('should view campaign details', async ({ page }) => {
@@ -42,8 +42,8 @@ test.describe('Campaign Management Flow', () => {
 
     // Then I should see the campaign details page
     await expect(page.locator('h1:has-text("View Test Campaign")')).toBeVisible()
-    await expect(page.locator('text=Sessions')).toBeVisible()
-    await expect(page.locator('text=Characters')).toBeVisible()
+    await expect(page.locator('h2:has-text("Sessions")')).toBeVisible()
+    await expect(page.locator('h2:has-text("Characters")')).toBeVisible()
   })
 })
 

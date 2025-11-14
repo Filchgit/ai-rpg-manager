@@ -32,8 +32,8 @@ test.describe('Character Management Flow', () => {
     await page.click('button[type="submit"]:has-text("Create Character")')
 
     // Then I should see the new character in the list
-    await expect(page.locator('text=Aragorn')).toBeVisible()
-    await expect(page.locator('text=Human Ranger Level 5')).toBeVisible()
+    await expect(page.locator('text=Aragorn').first()).toBeVisible()
+    await expect(page.locator('text=Human Ranger Level 5').first()).toBeVisible()
   })
 
   test('should create multiple characters', async ({ page }) => {
@@ -55,8 +55,8 @@ test.describe('Character Management Flow', () => {
     await page.click('button[type="submit"]:has-text("Create Character")')
 
     // Then I should see both characters in the list
-    await expect(page.locator('text=Gandalf')).toBeVisible()
-    await expect(page.locator('text=Legolas')).toBeVisible()
+    await expect(page.locator('text=Gandalf').first()).toBeVisible()
+    await expect(page.locator('text=Legolas').first()).toBeVisible()
   })
 })
 
