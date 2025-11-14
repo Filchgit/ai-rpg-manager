@@ -1,0 +1,55 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "deploy-production" to confirm'
+        required: true
+
+jobs:
+  deploy-production:
+    name: Deploy to Production (Vercel)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirmation == 'deploy-production'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      
+      - name: Deploy to Vercel Production
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --env DATABASE_URL=${{ secrets.PROD_DATABASE_URL }} --env OPENAI_API_KEY=${{ secrets.PROD_OPENAI_API_KEY }}'
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+      
+      - name: Production smoke tests
+        run: |
+          echo "Running smoke tests against production..."
+          curl -f ${{ steps.deploy.outputs.url }}/api/campaigns || exit 1
+      
+      - name: Notify deployment
+        run: echo "🚀 Successfully deployed to production at ${{ steps.deploy.outputs.url }}"
+

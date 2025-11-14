@@ -1,0 +1,101 @@
+// Prisma schema for AI RPG Manager
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  worldSettings String? @db.Text
+  aiGuidelines String? @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  sessions    Session[]
+  characters  Character[]
+  
+  @@index([createdAt])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  status      SessionStatus @default(ACTIVE)
+  notes       String?  @db.Text
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  
+  @@index([campaignId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Character {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  race        String?
+  class       String?
+  level       Int      @default(1)
+  stats       Json?    // Store character stats as JSON (STR, DEX, CON, INT, WIS, CHA)
+  backstory   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sessionId   String
+  role        MessageRole
+  content     String   @db.Text
+  tokenCount  Int?
+  metadata    Json?    // Store additional metadata (prompt tokens, completion tokens, etc.)
+  createdAt   DateTime @default(now())
+  
+  session     Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  requestCount Int     @default(0)
+  tokenCount  Int      @default(0)
+  windowStart DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([sessionId])
+  @@index([windowStart])
+}
+
