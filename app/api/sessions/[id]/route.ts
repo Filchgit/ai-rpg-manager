@@ -44,7 +44,7 @@ export async function PATCH(
     return NextResponse.json(session)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Error updating session:', error)
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 })

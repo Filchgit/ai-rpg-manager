@@ -19,7 +19,7 @@ export async function POST(
     return NextResponse.json(response)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
       return NextResponse.json({ error: error.message }, { status: 429 })

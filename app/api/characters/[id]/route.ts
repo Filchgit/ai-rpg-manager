@@ -49,7 +49,7 @@ export async function PATCH(
     return NextResponse.json(character)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Error updating character:', error)
     return NextResponse.json({ error: 'Failed to update character' }, { status: 500 })

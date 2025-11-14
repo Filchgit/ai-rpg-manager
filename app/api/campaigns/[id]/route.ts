@@ -38,7 +38,7 @@ export async function PATCH(
     return NextResponse.json(campaign)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error('Error updating campaign:', error)
     return NextResponse.json({ error: 'Failed to update campaign' }, { status: 500 })
