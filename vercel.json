@@ -2,13 +2,6 @@
   "buildCommand": "npx prisma generate && npm run build",
   "installCommand": "npm ci",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "MAX_TOKENS_PER_REQUEST": "500",
-    "MAX_REQUESTS_PER_SESSION": "20",
-    "RATE_LIMIT_WINDOW_MS": "3600000"
-  }
+  "regions": ["iad1"]
 }
 
