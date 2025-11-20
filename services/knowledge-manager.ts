@@ -174,7 +174,7 @@ export class KnowledgeManagerService {
         campaignId: input.campaignId,
         name: input.name,
         description: input.description,
-        conditions: input.conditions || null,
+        conditions: input.conditions,
         toneRules: input.toneRules,
         priority: input.priority || 0,
       },
