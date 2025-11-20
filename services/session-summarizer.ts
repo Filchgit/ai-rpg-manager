@@ -77,7 +77,7 @@ export class SessionSummarizerService {
         messageRangeStart: startMessageNumber,
         messageRangeEnd: allMessages.length,
         summary: fullSummary,
-        keyEvents: keyEvents,
+        keyEvents: keyEvents as any,
       },
     })
   }
