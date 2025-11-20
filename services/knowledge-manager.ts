@@ -243,7 +243,7 @@ export class KnowledgeManagerService {
     return await prisma.mechanicsRule.findMany({
       where: {
         campaignId,
-        ...(category ? { category } : {}),
+        ...(category ? { category: category as any } : {}),
       },
       orderBy: { category: 'asc' },
     })
