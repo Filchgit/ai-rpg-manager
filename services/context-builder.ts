@@ -312,7 +312,7 @@ export class ContextBuilderService {
     }
 
     // Add to recent events (keep last 5)
-    const existingEvents = session.state?.recentEvents || []
+    const existingEvents = (session.state?.recentEvents as string[]) || []
     const newEvent = userInput.substring(0, 100) // Truncate to 100 chars
     const recentEvents = [newEvent, ...existingEvents].slice(0, 5)
     updates.recentEvents = recentEvents
