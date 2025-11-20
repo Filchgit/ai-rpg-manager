@@ -2,9 +2,100 @@ import { openaiService } from '@/lib/openai'
 import { rateLimitService } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { AIResponse, AIPromptContext } from '@/types'
+import { contextBuilderService } from './context-builder'
+import { sessionSummarizerService } from './session-summarizer'
+import { costTrackingService } from './cost-tracking'
 
 export class AIDungeonMasterService {
+  /**
+   * Generate AI response using OPTIMIZED context system
+   * This is the new cost-optimized method
+   */
   async generateResponse(sessionId: string, userInput: string): Promise<AIResponse> {
+    // Check rate limit
+    const rateLimitStatus = await rateLimitService.checkRateLimit(sessionId)
+    if (!rateLimitStatus.allowed) {
+      throw new Error(
+        `Rate limit exceeded. Resets at ${rateLimitStatus.resetAt.toISOString()}`
+      )
+    }
+
+    // Check session status
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { status: true },
+    })
+
+    if (!session) {
+      throw new Error('Session not found')
+    }
+
+    if (session.status !== 'ACTIVE') {
+      throw new Error('Session is not active')
+    }
+
+    // Check cost budget before proceeding
+    const budgetCheck = await costTrackingService.checkSessionBudget(sessionId)
+    if (budgetCheck.warningLevel === 'critical') {
+      console.warn(`Session ${sessionId} has exceeded cost limit: ${budgetCheck.message}`)
+      // Could optionally throw error or return warning to user
+    }
+
+    // Build optimized context using new context builder
+    const enhancedContext = await contextBuilderService.buildContext(
+      sessionId,
+      userInput
+    )
+
+    // Generate AI response using enhanced context (uses less tokens)
+    const aiResponse = await openaiService.generateEnhancedStoryResponse(
+      userInput,
+      enhancedContext
+    )
+
+    // Save user message
+    await prisma.message.create({
+      data: {
+        sessionId,
+        role: 'USER',
+        content: userInput,
+      },
+    })
+
+    // Save assistant message with detailed cost tracking
+    await prisma.message.create({
+      data: {
+        sessionId,
+        role: 'ASSISTANT',
+        content: aiResponse.content,
+        tokenCount: aiResponse.tokenCount,
+        metadata: aiResponse.metadata,
+      },
+    })
+
+    // Update rate limit
+    await rateLimitService.incrementRateLimit(sessionId, aiResponse.tokenCount)
+
+    // Update session state based on AI response
+    await contextBuilderService.updateStateFromResponse(
+      sessionId,
+      userInput,
+      aiResponse.content
+    )
+
+    // Auto-summarize if threshold is met (happens in background)
+    sessionSummarizerService.autoSummarizeIfNeeded(sessionId).catch((err) => {
+      console.error('Background summarization failed:', err)
+    })
+
+    return aiResponse
+  }
+
+  /**
+   * Generate AI response using LEGACY context system
+   * Kept for backward compatibility, but uses more tokens
+   */
+  async generateResponseLegacy(sessionId: string, userInput: string): Promise<AIResponse> {
     // Check rate limit
     const rateLimitStatus = await rateLimitService.checkRateLimit(sessionId)
     if (!rateLimitStatus.allowed) {
@@ -37,7 +128,7 @@ export class AIDungeonMasterService {
       throw new Error('Session is not active')
     }
 
-    // Build context for AI
+    // Build context for AI (OLD WAY - sends more data)
     const context: AIPromptContext = {
       campaignName: session.campaign.name,
       campaignDescription: session.campaign.description || undefined,
@@ -53,7 +144,7 @@ export class AIDungeonMasterService {
       characterNames: session.campaign.characters.map(c => c.name),
     }
 
-    // Generate AI response
+    // Generate AI response (OLD WAY)
     const aiResponse = await openaiService.generateStoryResponse(userInput, context)
 
     // Save user message

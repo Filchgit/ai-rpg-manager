@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiDungeonMasterService } from '@/services/ai-dungeon-master'
+import { costTrackingService } from '@/services/cost-tracking'
 import { z } from 'zod'
 
 const MessageSchema = z.object({
@@ -16,6 +17,18 @@ export async function POST(
     const { content } = MessageSchema.parse(body)
 
     const response = await aiDungeonMasterService.generateResponse(sessionId, content)
+    
+    // Update cost snapshot after each AI response (only if tables exist)
+    try {
+      await costTrackingService.updateSessionCostSnapshot(sessionId)
+    } catch (costError) {
+      // Silently fail if tables don't exist yet (migration not applied)
+      if (costError instanceof Error && !costError.message.includes('does not exist')) {
+        console.error('Error updating cost snapshot:', costError)
+      }
+      // Don't fail the request if cost tracking fails
+    }
+    
     return NextResponse.json(response)
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -43,6 +43,10 @@ export default function CampaignsPage() {
     fetchCampaigns()
   }
 
+  const handleCampaignDeleted = (campaignId: string) => {
+    setCampaigns(campaigns.filter(c => c.id !== campaignId))
+  }
+
   return (
     <div className="min-h-screen bg-gray-950">
       <Navbar />
@@ -72,7 +76,11 @@ export default function CampaignsPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {campaigns.map(campaign => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
+              <CampaignCard 
+                key={campaign.id} 
+                campaign={campaign} 
+                onDelete={handleCampaignDeleted}
+              />
             ))}
           </div>
         )}

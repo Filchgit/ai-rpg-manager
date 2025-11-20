@@ -80,3 +80,28 @@ export type AIPromptContext = {
   characterNames?: string[]
 }
 
+// Enhanced AI Context for optimized prompts
+export type EnhancedAIContext = {
+  campaignName: string
+  currentState?: SessionStateContext
+  recentSummary?: string
+  recentMessages: Array<{
+    role: 'USER' | 'ASSISTANT'
+    content: string
+  }>
+  relevantKnowledge: Array<{
+    title: string
+    content: string
+  }>
+  toneGuidelines?: string
+  mechanicsRules?: string[]
+}
+
+export type SessionStateContext = {
+  currentLocation?: string
+  activeNPCs?: string[]
+  ongoingQuests?: string[]
+  partyConditions?: Record<string, any>
+  recentEvents?: string[]
+}
+

@@ -20,6 +20,11 @@ model Campaign {
   
   sessions    Session[]
   characters  Character[]
+  knowledge   CampaignKnowledge[]
+  toneProfiles ToneProfile[]
+  mechanicsRules MechanicsRule[]
+  costSnapshots SessionCostSnapshot[]
+  costAggregate CampaignCostAggregate?
   
   @@index([createdAt])
 }
@@ -37,6 +42,8 @@ model Session {
   
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   messages    Message[]
+  state       SessionState?
+  summaries   SessionSummary[]
   
   @@index([campaignId])
   @@index([status])
@@ -97,5 +104,144 @@ model RateLimit {
   
   @@index([sessionId])
   @@index([windowStart])
+}
+
+model SessionState {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+  currentLocation String?
+  activeNPCs      Json?    // Array of NPC names/descriptions currently in scene
+  ongoingQuests   Json?    // Array of active quest objectives
+  partyConditions Json?    // Health, status effects, inventory highlights
+  recentEvents    Json?    // Last 3-5 significant events for quick context
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+}
+
+model SessionSummary {
+  id              String   @id @default(cuid())
+  sessionId       String
+  messageRangeStart Int    // Starting message number this summary covers
+  messageRangeEnd   Int    // Ending message number this summary covers
+  summary         String   @db.Text
+  keyEvents       Json?    // Structured key events (dice rolls, combat results, decisions)
+  createdAt       DateTime @default(now())
+  
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([messageRangeEnd])
+}
+
+model CampaignKnowledge {
+  id          String   @id @default(cuid())
+  campaignId  String
+  category    KnowledgeCategory
+  title       String
+  content     String   @db.Text
+  keywords    Json?    // Array of keywords for matching
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([category])
+}
+
+enum KnowledgeCategory {
+  LOCATION
+  NPC
+  ITEM
+  LORE
+  FACTION
+  QUEST
+  OTHER
+}
+
+model ToneProfile {
+  id          String   @id @default(cuid())
+  campaignId  String
+  name        String
+  description String?
+  conditions  Json?    // When to apply this tone (e.g., character present, location type)
+  toneRules   String   @db.Text  // Instructions for AI tone/style
+  priority    Int      @default(0)  // Higher priority profiles override lower ones
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([priority])
+}
+
+model MechanicsRule {
+  id          String   @id @default(cuid())
+  campaignId  String
+  category    MechanicsCategory
+  title       String
+  content     String   @db.Text
+  keywords    Json?    // Keywords that trigger including this rule
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([category])
+}
+
+enum MechanicsCategory {
+  COMBAT
+  SKILL_CHECK
+  MAGIC
+  SOCIAL
+  EXPLORATION
+  REST
+  OTHER
+}
+
+// Persistent cost tracking that survives session/campaign deletion
+model SessionCostSnapshot {
+  id                  String   @id @default(cuid())
+  sessionId           String?  @unique // Nullable to allow session deletion
+  campaignId          String
+  sessionName         String
+  totalMessages       Int      @default(0)
+  totalTokens         Int      @default(0)
+  promptTokens        Int      @default(0)
+  completionTokens    Int      @default(0)
+  totalCost           Decimal  @db.Decimal(10, 6)
+  sessionStartedAt    DateTime
+  sessionEndedAt      DateTime?
+  lastUpdated         DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  
+  campaign            Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([sessionId])
+  @@index([sessionStartedAt])
+}
+
+model CampaignCostAggregate {
+  id                  String   @id @default(cuid())
+  campaignId          String   @unique
+  totalSessions       Int      @default(0)
+  totalMessages       Int      @default(0)
+  totalTokens         Int      @default(0)
+  totalCost           Decimal  @db.Decimal(10, 6) @default(0)
+  lastUpdated         DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  
+  campaign            Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
 }
 

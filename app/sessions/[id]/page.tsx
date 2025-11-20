@@ -3,6 +3,7 @@
 import { use, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import SessionCostDashboard from '@/components/SessionCostDashboard'
 
 type Message = {
   id: string
@@ -29,6 +30,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [showCosts, setShowCosts] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -151,9 +153,26 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         </div>
 
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
-          <h1 className="text-2xl font-bold text-white">{session.name}</h1>
-          <p className="text-sm text-gray-400">Status: {session.status}</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-white">{session.name}</h1>
+              <p className="text-sm text-gray-400">Status: {session.status}</p>
+            </div>
+            <button
+              onClick={() => setShowCosts(!showCosts)}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              {showCosts ? 'Hide Costs' : 'Show Costs'}
+            </button>
+          </div>
         </div>
+
+        {/* Cost Dashboard */}
+        {showCosts && (
+          <div className="bg-gray-800 rounded-lg p-4 mb-4">
+            <SessionCostDashboard sessionId={session.id} />
+          </div>
+        )}
 
         {/* Messages Container */}
         <div className="flex-1 bg-gray-800 rounded-lg p-4 mb-4 overflow-y-auto max-h-[calc(100vh-300px)]">
