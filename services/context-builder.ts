@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
-import { EnhancedAIContext, SessionStateContext } from '@/types'
+import { EnhancedAIContext, SessionStateContext, SpatialAIContext } from '@/types'
+import { spatialService } from './spatial-service'
 
 // Keywords that suggest mechanics are needed
 const MECHANICS_KEYWORDS = {
@@ -85,9 +86,19 @@ export class ContextBuilderService {
       userInput
     )
 
+    // 7. Get spatial context if applicable
+    let spatialContext: SpatialAIContext | undefined
+    try {
+      spatialContext = await this.buildSpatialContext(sessionId)
+    } catch (error) {
+      // Spatial context is optional, continue without it
+      console.log('Could not build spatial context:', error)
+    }
+
     return {
       campaignName: session.campaign.name,
       currentState,
+      spatialContext,
       recentSummary,
       recentMessages,
       relevantKnowledge,
@@ -106,6 +117,7 @@ export class ContextBuilderService {
 
     return {
       currentLocation: state.currentLocation || undefined,
+      locationId: state.locationId || undefined,
       activeNPCs: Array.isArray(state.activeNPCs) ? state.activeNPCs : undefined,
       ongoingQuests: Array.isArray(state.ongoingQuests)
         ? state.ongoingQuests
@@ -114,6 +126,87 @@ export class ContextBuilderService {
       recentEvents: Array.isArray(state.recentEvents)
         ? state.recentEvents
         : undefined,
+    }
+  }
+
+  /**
+   * Build spatial context for a character in the session
+   */
+  async buildSpatialContext(
+    sessionId: string,
+    characterId?: string
+  ): Promise<SpatialAIContext | undefined> {
+    // If no character specified, try to find the first player character
+    if (!characterId) {
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+        include: {
+          campaign: {
+            include: {
+              characters: {
+                take: 1,
+                orderBy: { createdAt: 'asc' },
+              },
+            },
+          },
+        },
+      })
+
+      if (!session?.campaign.characters[0]) {
+        return undefined
+      }
+
+      characterId = session.campaign.characters[0].id
+    }
+
+    // Get character position
+    const position = await prisma.characterPosition.findUnique({
+      where: { characterId },
+      include: {
+        character: true,
+        location: true,
+      },
+    })
+
+    if (!position || !position.locationId) {
+      return undefined
+    }
+
+    // Get full spatial context
+    const spatialContext = await spatialService.buildSpatialContext(
+      characterId,
+      sessionId
+    )
+
+    if (!spatialContext) {
+      return undefined
+    }
+
+    return {
+      locationName: position.location?.name,
+      characterPosition: {
+        x: position.x,
+        y: position.y,
+        z: position.z,
+      },
+      nearbyCharacters: spatialContext.characterPositions.map((char) => ({
+        name: char.name,
+        position: char.position,
+        distance: char.distance,
+        canSee: char.canSee,
+        coverLevel: char.coverLevel,
+      })),
+      nearbyFeatures: spatialContext.nearbyFeatures.map((feature) => ({
+        name: feature.name,
+        type: feature.type,
+        position: feature.position,
+        distance: feature.distance,
+      })),
+      availableActions: spatialContext.availableActions.map((action) => ({
+        action: action.action,
+        targetName: action.targetName,
+        requiresMovement: action.requiresMovement,
+      })),
     }
   }
 

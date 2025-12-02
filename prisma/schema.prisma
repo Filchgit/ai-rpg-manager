@@ -25,6 +25,8 @@ model Campaign {
   mechanicsRules MechanicsRule[]
   costSnapshots SessionCostSnapshot[]
   costAggregate CampaignCostAggregate?
+  locations   Location[]
+  movementRules MovementRule[]
   
   @@index([createdAt])
 }
@@ -69,6 +71,7 @@ model Character {
   updatedAt   DateTime @updatedAt
   
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  position    CharacterPosition?
   
   @@index([campaignId])
 }
@@ -109,7 +112,8 @@ model RateLimit {
 model SessionState {
   id              String   @id @default(cuid())
   sessionId       String   @unique
-  currentLocation String?
+  currentLocation String?  // Legacy text description
+  locationId      String?  // Reference to Location model
   activeNPCs      Json?    // Array of NPC names/descriptions currently in scene
   ongoingQuests   Json?    // Array of active quest objectives
   partyConditions Json?    // Health, status effects, inventory highlights
@@ -118,8 +122,10 @@ model SessionState {
   updatedAt       DateTime @updatedAt
   
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  location        Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   
   @@index([sessionId])
+  @@index([locationId])
 }
 
 model SessionSummary {
@@ -243,5 +249,120 @@ model CampaignCostAggregate {
   campaign            Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   
   @@index([campaignId])
+}
+
+// Spatial Location System
+
+model Location {
+  id              String   @id @default(cuid())
+  campaignId      String
+  name            String
+  description     String   @db.Text
+  // Bounding box coordinates
+  minX            Float
+  maxX            Float
+  minY            Float
+  maxY            Float
+  minZ            Float
+  maxZ            Float
+  // Unit type (feet, meters, etc.)
+  unitType        String   @default("feet")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  features        LocationFeature[]
+  characterPositions CharacterPosition[]
+  sessionStates   SessionState[]
+  
+  @@index([campaignId])
+}
+
+model LocationFeature {
+  id              String   @id @default(cuid())
+  locationId      String
+  type            FeatureType
+  name            String
+  description     String?  @db.Text
+  // Position and dimensions
+  x               Float
+  y               Float
+  z               Float
+  width           Float?
+  height          Float?
+  depth           Float?
+  // Properties
+  blocksMovement  Boolean  @default(false)
+  blocksVision    Boolean  @default(false)
+  providesCover   CoverLevel @default(NONE)
+  elevation       Float    @default(0)
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  location        Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  @@index([locationId])
+  @@index([type])
+}
+
+model CharacterPosition {
+  id              String   @id @default(cuid())
+  characterId     String   @unique
+  locationId      String?
+  x               Float    @default(0)
+  y               Float    @default(0)
+  z               Float    @default(0)
+  facing          Float?   // Direction in degrees (0-360)
+  lastUpdated     DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  location        Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  
+  @@index([characterId])
+  @@index([locationId])
+}
+
+model MovementRule {
+  id                  String   @id @default(cuid())
+  campaignId          String
+  name                String
+  maxDistance         Float    // Maximum distance for this interaction type
+  interactionType     InteractionType
+  requiresLineOfSight Boolean  @default(false)
+  description         String   @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  campaign            Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@index([campaignId])
+  @@index([interactionType])
+}
+
+enum FeatureType {
+  OBSTACLE
+  POI
+  DOOR
+  FURNITURE
+  TERRAIN
+  HAZARD
+}
+
+enum CoverLevel {
+  NONE
+  HALF
+  THREE_QUARTERS
+  FULL
+}
+
+enum InteractionType {
+  MELEE
+  RANGED
+  SPELL
+  CONVERSATION
+  PERCEPTION
+  CUSTOM
 }
 

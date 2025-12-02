@@ -84,6 +84,7 @@ export type AIPromptContext = {
 export type EnhancedAIContext = {
   campaignName: string
   currentState?: SessionStateContext
+  spatialContext?: SpatialAIContext
   recentSummary?: string
   recentMessages: Array<{
     role: 'USER' | 'ASSISTANT'
@@ -99,9 +100,98 @@ export type EnhancedAIContext = {
 
 export type SessionStateContext = {
   currentLocation?: string
+  locationId?: string
   activeNPCs?: string[]
   ongoingQuests?: string[]
   partyConditions?: Record<string, any>
   recentEvents?: string[]
+}
+
+// Spatial System Types
+
+export type Position3D = {
+  x: number
+  y: number
+  z: number
+}
+
+export type LocationCreateInput = {
+  campaignId: string
+  name: string
+  description: string
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+  minZ: number
+  maxZ: number
+  unitType?: string
+}
+
+export type LocationFeatureCreateInput = {
+  locationId: string
+  type: 'OBSTACLE' | 'POI' | 'DOOR' | 'FURNITURE' | 'TERRAIN' | 'HAZARD'
+  name: string
+  description?: string
+  x: number
+  y: number
+  z: number
+  width?: number
+  height?: number
+  depth?: number
+  blocksMovement?: boolean
+  blocksVision?: boolean
+  providesCover?: 'NONE' | 'HALF' | 'THREE_QUARTERS' | 'FULL'
+  elevation?: number
+  metadata?: Record<string, any>
+}
+
+export type MovementRuleCreateInput = {
+  campaignId: string
+  name: string
+  maxDistance: number
+  interactionType: 'MELEE' | 'RANGED' | 'SPELL' | 'CONVERSATION' | 'PERCEPTION' | 'CUSTOM'
+  requiresLineOfSight?: boolean
+  description: string
+}
+
+export type CharacterPositionUpdate = {
+  characterId: string
+  locationId?: string | null
+  x?: number
+  y?: number
+  z?: number
+  facing?: number | null
+}
+
+export type SpatialAIContext = {
+  locationName?: string
+  characterPosition?: Position3D
+  nearbyCharacters?: Array<{
+    name: string
+    position: Position3D
+    distance: number
+    canSee: boolean
+    coverLevel: string
+  }>
+  nearbyFeatures?: Array<{
+    name: string
+    type: string
+    position: Position3D
+    distance: number
+  }>
+  availableActions?: Array<{
+    action: string
+    targetName: string
+    requiresMovement: boolean
+  }>
+}
+
+export type MovementSuggestion = {
+  fromPosition: Position3D
+  toPosition: Position3D
+  reason: string
+  targetName?: string
+  distance: number
 }
 

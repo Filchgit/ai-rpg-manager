@@ -199,6 +199,49 @@ export class OpenAIService {
       prompt += `\n`
     }
 
+    // Add spatial context (positions, distances, line of sight)
+    if (context.spatialContext) {
+      prompt += `Spatial Context:\n`
+      
+      if (context.spatialContext.locationName) {
+        prompt += `- Current Location: ${context.spatialContext.locationName}\n`
+      }
+      
+      if (context.spatialContext.characterPosition) {
+        const pos = context.spatialContext.characterPosition
+        prompt += `- Your Position: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})\n`
+      }
+      
+      if (context.spatialContext.nearbyCharacters && context.spatialContext.nearbyCharacters.length > 0) {
+        prompt += `- Nearby Characters:\n`
+        context.spatialContext.nearbyCharacters.forEach((char) => {
+          const visibility = char.canSee ? 'visible' : 'hidden'
+          const cover = char.coverLevel !== 'NONE' ? ` with ${char.coverLevel.toLowerCase()} cover` : ''
+          prompt += `  • ${char.name} at (${char.position.x.toFixed(1)}, ${char.position.y.toFixed(1)}, ${char.position.z.toFixed(1)}) - ${char.distance.toFixed(1)} units away, ${visibility}${cover}\n`
+        })
+      }
+      
+      if (context.spatialContext.nearbyFeatures && context.spatialContext.nearbyFeatures.length > 0) {
+        prompt += `- Nearby Features:\n`
+        context.spatialContext.nearbyFeatures.slice(0, 5).forEach((feature) => {
+          prompt += `  • ${feature.name} (${feature.type}) - ${feature.distance.toFixed(1)} units away\n`
+        })
+      }
+      
+      if (context.spatialContext.availableActions && context.spatialContext.availableActions.length > 0) {
+        prompt += `- Available Actions:\n`
+        context.spatialContext.availableActions.slice(0, 5).forEach((action) => {
+          const movement = action.requiresMovement ? ' (requires movement)' : ''
+          prompt += `  • ${action.action} → ${action.targetName}${movement}\n`
+        })
+      }
+      
+      prompt += `\n`
+      prompt += `IMPORTANT: When describing actions, take into account the positions and distances between characters. ` +
+        `Use the stored location data and mechanics rules to determine what is physically possible. ` +
+        `If a character wants to interact with something far away, suggest they move closer first.\n\n`
+    }
+
     // Add relevant knowledge (only 3-5 entries instead of full campaign lore)
     if (context.relevantKnowledge && context.relevantKnowledge.length > 0) {
       prompt += `Relevant Information:\n`
