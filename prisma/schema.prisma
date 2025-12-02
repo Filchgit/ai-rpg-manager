@@ -265,8 +265,8 @@ model Location {
   maxY            Float
   minZ            Float
   maxZ            Float
-  // Unit type (feet, meters, etc.)
-  unitType        String   @default("feet")
+  // Unit type (meters, feet, etc.)
+  unitType        String   @default("meters")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   

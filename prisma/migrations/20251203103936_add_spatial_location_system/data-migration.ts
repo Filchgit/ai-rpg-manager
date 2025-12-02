@@ -40,12 +40,12 @@ async function main() {
         name: 'Starting Area',
         description: 'A default starting location for your adventure. You can customize this or create new locations.',
         minX: 0,
-        maxX: 100,
+        maxX: 30,   // ~100 feet
         minY: 0,
-        maxY: 100,
+        maxY: 30,   // ~100 feet
         minZ: 0,
-        maxZ: 10,
-        unitType: 'feet',
+        maxZ: 3,    // ~10 feet
+        unitType: 'meters',
       },
     })
     console.log(`  ✓ Created location: ${location.id}`)
@@ -57,38 +57,38 @@ async function main() {
       const defaultRules = [
         {
           name: 'Melee Attack',
-          maxDistance: 5,
+          maxDistance: 1.5,  // ~5 feet
           interactionType: 'MELEE' as const,
           requiresLineOfSight: false,
-          description: 'Attack with melee weapons at close range (5 feet)',
+          description: 'Attack with melee weapons at close range (1.5 meters)',
         },
         {
           name: 'Ranged Attack',
-          maxDistance: 60,
+          maxDistance: 18,   // ~60 feet
           interactionType: 'RANGED' as const,
           requiresLineOfSight: true,
-          description: 'Attack with ranged weapons up to 60 feet with line of sight',
+          description: 'Attack with ranged weapons up to 18 meters with line of sight',
         },
         {
           name: 'Spell Casting',
-          maxDistance: 30,
+          maxDistance: 9,    // ~30 feet
           interactionType: 'SPELL' as const,
           requiresLineOfSight: true,
-          description: 'Cast spells at targets within 30 feet with line of sight',
+          description: 'Cast spells at targets within 9 meters with line of sight',
         },
         {
           name: 'Conversation',
-          maxDistance: 20,
+          maxDistance: 6,    // ~20 feet
           interactionType: 'CONVERSATION' as const,
           requiresLineOfSight: false,
-          description: 'Talk to characters within 20 feet',
+          description: 'Talk to characters within 6 meters',
         },
         {
           name: 'Perception Check',
-          maxDistance: 60,
+          maxDistance: 18,   // ~60 feet
           interactionType: 'PERCEPTION' as const,
           requiresLineOfSight: true,
-          description: 'Notice things within 60 feet with line of sight',
+          description: 'Notice things within 18 meters with line of sight',
         },
       ]
 
@@ -119,8 +119,8 @@ async function main() {
           data: {
             characterId: character.id,
             locationId: location.id,
-            x: 50,
-            y: 50,
+            x: 15,  // Center of 30x30 meter area
+            y: 15,  // Center of 30x30 meter area
             z: 0,
             facing: 0,
           },

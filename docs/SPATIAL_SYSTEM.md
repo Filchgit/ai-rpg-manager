@@ -24,10 +24,10 @@ Locations define bounded 3D spaces where gameplay occurs:
 {
   name: "Tavern Main Hall",
   description: "A cozy tavern...",
-  minX: 0, maxX: 60,    // 60 feet wide
-  minY: 0, maxY: 40,    // 40 feet deep  
-  minZ: 0, maxZ: 15,    // 15 feet tall
-  unitType: "feet"
+  minX: 0, maxX: 18,    // 18 meters wide (~60 feet)
+  minY: 0, maxY: 12,    // 12 meters deep (~40 feet)
+  minZ: 0, maxZ: 4.5,   // 4.5 meters tall (~15 feet)
+  unitType: "meters"    // Default is meters (can be "feet", etc.)
 }
 ```
 
@@ -77,12 +77,14 @@ Define what interactions are possible at what distances:
 }
 ```
 
-Default rules created for new campaigns:
-- Melee: 5 feet
-- Ranged: 60 feet (requires LOS)
-- Spell: 30 feet (requires LOS)
-- Conversation: 20 feet
-- Perception: 60 feet (requires LOS)
+Default rules created for new campaigns (in meters):
+- Melee: 1.5 meters (~5 feet)
+- Ranged: 18 meters (~60 feet, requires LOS)
+- Spell: 9 meters (~30 feet, requires LOS)
+- Conversation: 6 meters (~20 feet)
+- Perception: 18 meters (~60 feet, requires LOS)
+
+**Note:** The system uses metric (meters) by default. Imperial conversions can be added in the UI layer later.
 
 ## API Endpoints
 
@@ -143,10 +145,10 @@ const response = await fetch(`/api/campaigns/${campaignId}/locations`, {
   body: JSON.stringify({
     name: 'Throne Room',
     description: 'A grand throne room...',
-    minX: 0, maxX: 80,
-    minY: 0, maxY: 60,
-    minZ: 0, maxZ: 30,
-    unitType: 'feet'
+    minX: 0, maxX: 24,
+    minY: 0, maxY: 18,
+    minZ: 0, maxZ: 9,
+    unitType: 'meters'
   })
 })
 ```
@@ -162,8 +164,8 @@ const response = await fetch(
     body: JSON.stringify({
       type: 'OBSTACLE',
       name: 'Stone Pillar',
-      x: 20, y: 30, z: 0,
-      width: 5, height: 20, depth: 5,
+      x: 6, y: 9, z: 0,
+      width: 1.5, height: 6, depth: 1.5,
       blocksMovement: true,
       blocksVision: true,
       providesCover: 'FULL'
@@ -180,8 +182,8 @@ const response = await fetch(`/api/characters/${characterId}/position`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     locationId: locationId,
-    x: 45,
-    y: 50,
+    x: 13.5,
+    y: 15,
     z: 0,
     facing: 180
   })
@@ -249,13 +251,13 @@ The spatial system is automatically integrated with the AI Dungeon Master. The A
 ```
 Spatial Context:
 - Current Location: Tavern Main Hall
-- Your Position: (45.0, 50.0, 0.0)
+- Your Position: (13.5, 15.0, 0.0)
 - Nearby Characters:
-  • Orc Warrior at (50.0, 48.0, 0.0) - 5.4 feet away, visible
-  • Elven Mage at (30.0, 35.0, 0.0) - 20.6 feet away, visible with half cover
+  • Orc Warrior at (15.0, 14.5, 0.0) - 1.6 meters away, visible
+  • Elven Mage at (9.0, 10.5, 0.0) - 6.3 meters away, visible with half cover
 - Nearby Features:
-  • Bar Counter (FURNITURE) - 15.8 feet away
-  • Fireplace (FURNITURE) - 25.3 feet away
+  • Bar Counter (FURNITURE) - 4.8 meters away
+  • Fireplace (FURNITURE) - 7.7 meters away
 - Available Actions:
   • MELEE (Melee Attack) → Orc Warrior
   • RANGED (Ranged Attack) → Elven Mage
@@ -294,27 +296,27 @@ npx tsx prisma/migrations/20251203103936_add_spatial_location_system/data-migrat
 ```
 
 This will:
-- Create a default "Starting Area" (100x100x10 feet) for each campaign
-- Place all characters at the center (50, 50, 0)
-- Create default movement rules
+- Create a default "Starting Area" (30x30x3 meters, ~100x100x10 feet) for each campaign
+- Place all characters at the center (15, 15, 0)
+- Create default movement rules (in meters)
 - Set up character positions
 
 ## Location Templates
 
-Three built-in templates are available:
+Three built-in templates are available (all in meters):
 
 ### Tavern
-- 60x40x15 feet
+- 18x12x4.5 meters (~60x40x15 feet)
 - Includes bar counter, fireplace, main entrance
 - Good for social encounters
 
 ### Dungeon Room
-- 50x50x20 feet
+- 15x15x6 meters (~50x50x20 feet)
 - Stone pillars, rubble piles
 - Good for combat
 
 ### Forest Clearing
-- 80x80x30 feet
+- 24x24x9 meters (~80x80x30 feet)
 - Large trees, boulders, campfire ring
 - Good for outdoor encounters
 
@@ -322,21 +324,22 @@ Three built-in templates are available:
 
 ### Location Design
 
-1. **Size Appropriately**: Most combat encounters work well in 50x50 to 100x100 feet
+1. **Size Appropriately**: Most combat encounters work well in 15x15 to 30x30 meters (~50x50 to 100x100 feet)
 2. **Add Features**: Include 3-5 interesting features per location
 3. **Use Cover**: Add features with cover for tactical combat
 4. **Vary Elevation**: Use the Z axis for platforms, elevated areas
 
 ### Movement Rules
 
-1. **Start with Defaults**: The default rules work for most D&D-style games
+1. **Start with Defaults**: The default rules work for most D&D-style games (converted to metric)
 2. **Customize Per Campaign**: Adjust distances based on your setting
 3. **Consider Line of Sight**: Ranged attacks and spells usually need LOS
+4. **Metric First**: All measurements are in meters by default; UI can convert to imperial for display
 
 ### Character Positioning
 
 1. **Update Regularly**: Move characters as they act
-2. **Group Characters**: Keep party members within 5-10 feet for cohesion
+2. **Group Characters**: Keep party members within 1.5-3 meters (~5-10 feet) for cohesion
 3. **Use Facing**: Track which direction characters face for tactical play
 
 ### AI Interaction
