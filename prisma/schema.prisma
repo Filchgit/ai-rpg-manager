@@ -59,16 +59,22 @@ enum SessionStatus {
 }
 
 model Character {
-  id          String   @id @default(cuid())
-  campaignId  String
-  name        String
-  race        String?
-  class       String?
-  level       Int      @default(1)
-  stats       Json?    // Store character stats as JSON (STR, DEX, CON, INT, WIS, CHA)
-  backstory   String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  campaignId      String
+  name            String
+  race            String?
+  class           String?
+  level           Int      @default(1)
+  stats           Json?    // Store character stats as JSON (STR, DEX, CON, INT, WIS, CHA)
+  backstory       String?  @db.Text
+  // Movement rates (in meters per round/turn)
+  baseMovementRate Float   @default(9.0)    // Default: 9 meters (~30 feet) per turn
+  dashMovementRate Float?                    // Optional: movement when dashing (usually 2x base)
+  flySpeed         Float?                    // Optional: flying speed if applicable
+  swimSpeed        Float?                    // Optional: swimming speed if applicable
+  climbSpeed       Float?                    // Optional: climbing speed if applicable
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   position    CharacterPosition?

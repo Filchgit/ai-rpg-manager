@@ -482,6 +482,43 @@ export class SpatialService {
   }
 
   /**
+   * Calculate turn-based movement info for a character
+   */
+  async calculateTurnMovement(
+    characterId: string,
+    distance: number
+  ): Promise<{
+    baseMovementRate: number
+    canReachInOneTurn: boolean
+    turnsRequired: number
+    dashRequired: boolean
+  }> {
+    // Get character's movement rate
+    const character = await prisma.character.findUnique({
+      where: { id: characterId },
+      select: {
+        baseMovementRate: true,
+        dashMovementRate: true,
+      },
+    })
+
+    const baseRate = character?.baseMovementRate || 9.0 // Default 9 meters
+    const dashRate = character?.dashMovementRate || baseRate * 2 // Default: 2x base
+
+    // Calculate if reachable in one turn
+    const canReachInOneTurn = distance <= baseRate
+    const dashRequired = !canReachInOneTurn && distance <= dashRate
+    const turnsRequired = Math.ceil(distance / baseRate)
+
+    return {
+      baseMovementRate: baseRate,
+      canReachInOneTurn,
+      turnsRequired,
+      dashRequired,
+    }
+  }
+
+  /**
    * Validate movement from one position to another
    */
   async validateMovement(

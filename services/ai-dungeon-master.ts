@@ -74,6 +74,31 @@ export class AIDungeonMasterService {
           `Blocked by: ${validation.blockedBy.join(', ')}`
         ]
       }
+
+      // Calculate turn-based movement info
+      if (suggestion.characterId && suggestion.characterId !== 'player') {
+        const turnMovement = await spatialService.calculateTurnMovement(
+          suggestion.characterId,
+          suggestion.distance
+        )
+        
+        suggestion.baseMovementRate = turnMovement.baseMovementRate
+        suggestion.canReachInOneTurn = turnMovement.canReachInOneTurn
+        suggestion.turnsRequired = turnMovement.turnsRequired
+        suggestion.dashRequired = turnMovement.dashRequired
+
+        // Add turn-based warnings
+        if (!turnMovement.canReachInOneTurn) {
+          const turnWarning = turnMovement.dashRequired
+            ? `Requires dashing to reach in one turn (${suggestion.distance.toFixed(1)}m movement, ${turnMovement.baseMovementRate}m base speed)`
+            : `Cannot reach in one turn (requires ${turnMovement.turnsRequired} turns at ${turnMovement.baseMovementRate}m/turn)`
+          
+          suggestion.validationIssues = [
+            ...(suggestion.validationIssues || []),
+            turnWarning
+          ]
+        }
+      }
     }
 
     // Save user message

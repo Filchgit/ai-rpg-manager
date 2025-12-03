@@ -28,6 +28,11 @@ export type CharacterCreateInput = {
   level?: number
   stats?: CharacterStats
   backstory?: string
+  baseMovementRate?: number // Default: 9 meters (~30 feet) per turn
+  dashMovementRate?: number
+  flySpeed?: number
+  swimSpeed?: number
+  climbSpeed?: number
 }
 
 export type CharacterStats = {
@@ -84,6 +89,7 @@ export type AIPromptContext = {
 // Enhanced AI Context for optimized prompts
 export type EnhancedAIContext = {
   campaignName: string
+  characterId?: string // Character ID for movement calculations
   currentState?: SessionStateContext
   spatialContext?: SpatialAIContext
   recentSummary?: string
@@ -201,6 +207,11 @@ export type MovementSuggestion = {
   locationId: string
   isValid: boolean
   validationIssues?: string[]
+  // Turn-based movement info
+  baseMovementRate?: number // Character's base movement speed (meters per turn)
+  canReachInOneTurn?: boolean // Can reach target in one turn
+  turnsRequired?: number // How many turns needed to reach
+  dashRequired?: boolean // Needs to dash to reach in one turn
 }
 
 export type MovementIntent = {

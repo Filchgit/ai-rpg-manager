@@ -163,6 +163,8 @@ export class OpenAIService {
       const content = completion.choices[0]?.message?.content || ''
       const usage = completion.usage
 
+      console.log('OpenAI raw response:', content)
+
       // Parse JSON response
       let parsedResponse: {
         narrative: string
@@ -178,18 +180,25 @@ export class OpenAIService {
 
       try {
         parsedResponse = JSON.parse(content)
-      } catch {
+        console.log('Parsed movement:', parsedResponse.movement)
+      } catch (e) {
         // Fallback if JSON parsing fails
+        console.warn('Failed to parse JSON response from OpenAI:', e)
         parsedResponse = { narrative: content }
       }
 
       // Build movement suggestion if detected
       let movementSuggestion = undefined
       if (parsedResponse.movement?.detected && parsedResponse.movement.targetPosition) {
+        console.log('Movement detected! Building suggestion...')
         const mov = parsedResponse.movement
+        
+        // Get actual character ID from context (passed from buildContext)
+        const characterId = (context as any).characterId || ''
+        
         movementSuggestion = {
           id: `mov_${Date.now()}`,
-          characterId: context.spatialContext?.characterPosition ? 'player' : '',
+          characterId,
           characterName: mov.characterName || 'Player',
           from: context.spatialContext?.characterPosition || { x: 0, y: 0, z: 0 },
           to: mov.targetPosition,
@@ -204,6 +213,9 @@ export class OpenAIService {
           isValid: true, // Will be validated separately
           validationIssues: [],
         }
+        console.log('Movement suggestion created:', movementSuggestion)
+      } else {
+        console.log('No movement detected or missing targetPosition')
       }
 
       return {
@@ -241,6 +253,25 @@ export class OpenAIService {
   private buildEnhancedSystemPrompt(context: EnhancedAIContext): string {
     let prompt = `You are an expert Dungeon Master running a tabletop RPG session for "${context.campaignName}".\n\n`
 
+    // JSON FORMAT REQUIREMENT - MUST BE FIRST
+    prompt += `CRITICAL: You MUST ALWAYS respond in valid JSON format. Every response must be a JSON object.\n`
+    prompt += `Required JSON structure:\n`
+    prompt += `{\n`
+    prompt += `  "narrative": "Your immersive story response here (2-3 paragraphs)",\n`
+    prompt += `  "movement": {\n`
+    prompt += `    "detected": false  // Set to true ONLY if player explicitly indicates movement\n`
+    prompt += `  }\n`
+    prompt += `}\n\n`
+    prompt += `If movement is detected, include these additional fields in the movement object:\n`
+    prompt += `{\n`
+    prompt += `  "detected": true,\n`
+    prompt += `  "characterName": "Player",\n`
+    prompt += `  "targetName": "orc",\n`
+    prompt += `  "targetPosition": {"x": 15.5, "y": 14.0, "z": 0.0},\n`
+    prompt += `  "actionType": "MELEE",\n`
+    prompt += `  "reason": "To attack the orc"\n`
+    prompt += `}\n\n`
+
     // Add current state (much more efficient than full campaign description)
     if (context.currentState) {
       prompt += `Current Situation:\n`
@@ -262,16 +293,16 @@ export class OpenAIService {
     // Add spatial context (positions, distances, line of sight)
     if (context.spatialContext) {
       prompt += `Spatial Context:\n`
-      
+
       if (context.spatialContext.locationName) {
         prompt += `- Current Location: ${context.spatialContext.locationName}\n`
       }
-      
+
       if (context.spatialContext.characterPosition) {
         const pos = context.spatialContext.characterPosition
         prompt += `- Your Position: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})\n`
       }
-      
+
       if (context.spatialContext.nearbyCharacters && context.spatialContext.nearbyCharacters.length > 0) {
         prompt += `- Nearby Characters:\n`
         context.spatialContext.nearbyCharacters.forEach((char) => {
@@ -280,14 +311,14 @@ export class OpenAIService {
           prompt += `  • ${char.name} at (${char.position.x.toFixed(1)}, ${char.position.y.toFixed(1)}, ${char.position.z.toFixed(1)}) - ${char.distance.toFixed(1)} units away, ${visibility}${cover}\n`
         })
       }
-      
+
       if (context.spatialContext.nearbyFeatures && context.spatialContext.nearbyFeatures.length > 0) {
         prompt += `- Nearby Features:\n`
         context.spatialContext.nearbyFeatures.slice(0, 5).forEach((feature) => {
           prompt += `  • ${feature.name} (${feature.type}) - ${feature.distance.toFixed(1)} units away\n`
         })
       }
-      
+
       if (context.spatialContext.availableActions && context.spatialContext.availableActions.length > 0) {
         prompt += `- Available Actions:\n`
         context.spatialContext.availableActions.slice(0, 5).forEach((action) => {
@@ -295,7 +326,7 @@ export class OpenAIService {
           prompt += `  • ${action.action} → ${action.targetName}${movement}\n`
         })
       }
-      
+
       prompt += `\n`
       prompt += `IMPORTANT: When describing actions, take into account the positions and distances between characters. ` +
         `Use the stored location data and mechanics rules to determine what is physically possible. ` +
@@ -325,43 +356,29 @@ export class OpenAIService {
       prompt += `\n`
     }
 
-    // Core instructions (always included)
-    prompt += `Instructions:\n`
-    prompt += `- Be descriptive and immersive\n`
+    // Core DM instructions
+    prompt += `DM Instructions:\n`
+    prompt += `- Be descriptive and immersive in the "narrative" field\n`
     prompt += `- React to player actions naturally\n`
     prompt += `- Request dice rolls when appropriate\n`
     prompt += `- Stay consistent with established facts\n`
-    prompt += `- Keep responses concise (2-3 paragraphs)\n\n`
+    prompt += `- Keep narrative concise (2-3 paragraphs)\n\n`
 
-    // Movement detection instructions
-    prompt += `IMPORTANT: You MUST respond in JSON format with this structure:\n`
-    prompt += `{\n`
-    prompt += `  "narrative": "Your story response here",\n`
-    prompt += `  "movement": {\n`
-    prompt += `    "detected": false,  // Set to true if player indicates they want to move\n`
-    prompt += `    "characterName": "Player",\n`
-    prompt += `    "targetName": "orc",  // Name of target character/feature\n`
-    prompt += `    "targetPosition": {"x": 15.5, "y": 14.0, "z": 0.0},  // Calculate based on spatial context\n`
-    prompt += `    "actionType": "MELEE",  // MELEE, RANGED, SPELL, CONVERSATION, PERCEPTION, or MOVEMENT\n`
-    prompt += `    "reason": "To attack the orc"  // Why they're moving\n`
-    prompt += `  }\n`
-    prompt += `}\n\n`
-    prompt += `Movement Keywords to Watch For:\n`
-    prompt += `- Approach, move to, walk to, go to, head to\n`
-    prompt += `- Charge, rush, attack (close distance for melee)\n`
-    prompt += `- Flee, retreat, back away (move away)\n`
-    prompt += `- Investigate, examine, inspect (move closer to feature)\n`
-    prompt += `- Talk to, speak to (move to conversation range)\n\n`
-    prompt += `When movement is detected:\n`
-    prompt += `1. Set "detected" to true\n`
-    prompt += `2. Identify the target from the spatial context\n`
-    prompt += `3. Calculate appropriate position based on action type:\n`
-    prompt += `   - MELEE: 1.5 meters from target\n`
-    prompt += `   - RANGED: 10-18 meters from target\n`
-    prompt += `   - SPELL: 5-9 meters from target\n`
-    prompt += `   - CONVERSATION: 2-6 meters from target\n`
-    prompt += `   - PERCEPTION: Close to feature for investigation\n`
-    prompt += `4. Include the reason for movement\n\n`
+    // Movement detection guide
+    prompt += `Movement Detection Guide:\n`
+    prompt += `Keywords that indicate movement: charge, rush, attack, approach, move to, walk to, flee, retreat, investigate, examine, talk to\n\n`
+    prompt += `When you see these keywords:\n`
+    prompt += `1. Set movement.detected = true\n`
+    prompt += `2. Identify target from spatial context above\n`
+    prompt += `3. Calculate targetPosition based on action:\n`
+    prompt += `   - MELEE (attack/charge): 1.5m from target\n`
+    prompt += `   - RANGED: 10-18m from target\n`
+    prompt += `   - SPELL: 5-9m from target\n`
+    prompt += `   - CONVERSATION (talk to): 2-6m from target\n`
+    prompt += `   - PERCEPTION (investigate): 1m from feature\n`
+    prompt += `4. Set actionType and reason fields\n\n`
+    prompt += `Example: "I charge at the orc!" → movement.detected=true, actionType="MELEE", calculate position 1.5m from orc\n\n`
+    prompt += `REMEMBER: Always return valid JSON with both "narrative" and "movement" fields!\n\n`
 
     return prompt
   }

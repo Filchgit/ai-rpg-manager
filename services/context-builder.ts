@@ -95,8 +95,12 @@ export class ContextBuilderService {
       console.log('Could not build spatial context:', error)
     }
 
+    // 8. Get character ID (for movement calculations)
+    const characterId = session.campaign.characters[0]?.id
+
     return {
       campaignName: session.campaign.name,
+      characterId,
       currentState,
       spatialContext,
       recentSummary,
