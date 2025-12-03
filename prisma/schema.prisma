@@ -69,7 +69,6 @@ model Character {
   backstory       String?  @db.Text
   // Movement rates (in meters per round/turn)
   baseMovementRate Float   @default(9.0)    // Default: 9 meters (~30 feet) per turn
-  dashMovementRate Float?                    // Optional: movement when dashing (usually 2x base)
   flySpeed         Float?                    // Optional: flying speed if applicable
   swimSpeed        Float?                    // Optional: swimming speed if applicable
   climbSpeed       Float?                    // Optional: climbing speed if applicable

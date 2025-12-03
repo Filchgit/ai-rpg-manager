@@ -29,7 +29,6 @@ export type CharacterCreateInput = {
   stats?: CharacterStats
   backstory?: string
   baseMovementRate?: number // Default: 9 meters (~30 feet) per turn
-  dashMovementRate?: number
   flySpeed?: number
   swimSpeed?: number
   climbSpeed?: number
@@ -209,9 +208,9 @@ export type MovementSuggestion = {
   validationIssues?: string[]
   // Turn-based movement info
   baseMovementRate?: number // Character's base movement speed (meters per turn)
-  canReachInOneTurn?: boolean // Can reach target in one turn
-  turnsRequired?: number // How many turns needed to reach
-  dashRequired?: boolean // Needs to dash to reach in one turn
+  canReachInOneTurn?: boolean // Can reach target in one turn at base speed
+  turnsRequired?: number // How many turns needed to reach at base speed
+  movementModifier?: number // Modifier applied (e.g., 2.0 for running/dashing)
 }
 
 export type MovementIntent = {

@@ -192,10 +192,10 @@ export class OpenAIService {
       if (parsedResponse.movement?.detected && parsedResponse.movement.targetPosition) {
         console.log('Movement detected! Building suggestion...')
         const mov = parsedResponse.movement
-        
+
         // Get actual character ID from context (passed from buildContext)
         const characterId = (context as any).characterId || ''
-        
+
         movementSuggestion = {
           id: `mov_${Date.now()}`,
           characterId,

@@ -483,38 +483,38 @@ export class SpatialService {
 
   /**
    * Calculate turn-based movement info for a character
+   * Optionally apply a movement modifier (e.g., 2.0 for running/dashing)
    */
   async calculateTurnMovement(
     characterId: string,
-    distance: number
+    distance: number,
+    movementModifier: number = 1.0
   ): Promise<{
     baseMovementRate: number
     canReachInOneTurn: boolean
     turnsRequired: number
-    dashRequired: boolean
+    movementModifier: number
   }> {
     // Get character's movement rate
     const character = await prisma.character.findUnique({
       where: { id: characterId },
       select: {
         baseMovementRate: true,
-        dashMovementRate: true,
       },
     })
 
     const baseRate = character?.baseMovementRate || 9.0 // Default 9 meters
-    const dashRate = character?.dashMovementRate || baseRate * 2 // Default: 2x base
+    const effectiveRate = baseRate * movementModifier
 
-    // Calculate if reachable in one turn
-    const canReachInOneTurn = distance <= baseRate
-    const dashRequired = !canReachInOneTurn && distance <= dashRate
-    const turnsRequired = Math.ceil(distance / baseRate)
+    // Calculate if reachable in one turn with current modifier
+    const canReachInOneTurn = distance <= effectiveRate
+    const turnsRequired = Math.ceil(distance / effectiveRate)
 
     return {
       baseMovementRate: baseRate,
       canReachInOneTurn,
       turnsRequired,
-      dashRequired,
+      movementModifier,
     }
   }
 

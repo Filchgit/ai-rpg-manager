@@ -299,7 +299,7 @@ export class ContextBuilderService {
         matches =
           matches &&
           currentState.currentLocation.toLowerCase() ===
-            conditions.location.toLowerCase()
+          conditions.location.toLowerCase()
       }
 
       if (conditions.npcPresent && currentState?.activeNPCs) {
