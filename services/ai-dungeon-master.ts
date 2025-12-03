@@ -78,17 +78,17 @@ export class AIDungeonMasterService {
       // Calculate turn-based movement info
       if (suggestion.characterId && suggestion.characterId !== 'player') {
         // Detect if "running" or "charging" from user input/action type
-        const isRunning = suggestion.actionType === 'MELEE' && 
-                         (suggestion.reason?.toLowerCase().includes('charge') || 
-                          suggestion.reason?.toLowerCase().includes('rush'))
+        const isRunning = suggestion.actionType === 'MELEE' &&
+          (suggestion.reason?.toLowerCase().includes('charge') ||
+            suggestion.reason?.toLowerCase().includes('rush'))
         const movementModifier = isRunning ? 2.0 : 1.0 // Running = 2x speed
-        
+
         const turnMovement = await spatialService.calculateTurnMovement(
           suggestion.characterId,
           suggestion.distance,
           movementModifier
         )
-        
+
         suggestion.baseMovementRate = turnMovement.baseMovementRate
         suggestion.canReachInOneTurn = turnMovement.canReachInOneTurn
         suggestion.turnsRequired = turnMovement.turnsRequired
@@ -97,12 +97,12 @@ export class AIDungeonMasterService {
         // Add turn-based warnings
         if (!turnMovement.canReachInOneTurn) {
           const effectiveSpeed = turnMovement.baseMovementRate * turnMovement.movementModifier
-          const modifierText = turnMovement.movementModifier > 1.0 
+          const modifierText = turnMovement.movementModifier > 1.0
             ? ` (${turnMovement.movementModifier}x speed = ${effectiveSpeed}m/turn)`
             : ''
-          
+
           const turnWarning = `Cannot reach in one turn (requires ${turnMovement.turnsRequired} turns at ${turnMovement.baseMovementRate}m/turn${modifierText})`
-          
+
           suggestion.validationIssues = [
             ...(suggestion.validationIssues || []),
             turnWarning
