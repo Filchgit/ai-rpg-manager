@@ -480,6 +480,195 @@ export class SpatialService {
       availableActions,
     }
   }
+
+  /**
+   * Validate movement from one position to another
+   */
+  async validateMovement(
+    from: Position,
+    to: Position,
+    locationId: string
+  ): Promise<{
+    isValid: boolean
+    blockedBy?: string[]
+    suggestedAlternative?: Position
+    warnings?: string[]
+  }> {
+    const warnings: string[] = []
+    const blockedBy: string[] = []
+
+    // Get location bounds
+    const location = await prisma.location.findUnique({
+      where: { id: locationId },
+      include: {
+        features: {
+          where: {
+            blocksMovement: true,
+          },
+        },
+      },
+    })
+
+    if (!location) {
+      return {
+        isValid: false,
+        warnings: ['Location not found'],
+      }
+    }
+
+    // Check if target position is within bounds
+    if (
+      to.x < location.minX ||
+      to.x > location.maxX ||
+      to.y < location.minY ||
+      to.y > location.maxY ||
+      to.z < location.minZ ||
+      to.z > location.maxZ
+    ) {
+      warnings.push('Target position is outside location bounds')
+      return {
+        isValid: false,
+        warnings,
+      }
+    }
+
+    // Check if target position intersects with blocking features
+    for (const feature of location.features) {
+      if (this.positionIntersectsFeature(to, feature)) {
+        blockedBy.push(feature.name)
+      }
+    }
+
+    if (blockedBy.length > 0) {
+      return {
+        isValid: false,
+        blockedBy,
+        warnings: [`Path blocked by: ${blockedBy.join(', ')}`],
+      }
+    }
+
+    // Check if movement distance is reasonable (not teleporting)
+    const distance = this.calculateDistance(from, to)
+    const maxReasonableDistance = 50 // meters - adjust based on your needs
+    if (distance > maxReasonableDistance) {
+      warnings.push(
+        `Movement distance (${distance.toFixed(1)}m) seems unusually large`
+      )
+    }
+
+    return {
+      isValid: true,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    }
+  }
+
+  /**
+   * Validate movement path (check if straight line path is clear)
+   */
+  async validateMovementPath(
+    from: Position,
+    to: Position,
+    locationId: string
+  ): Promise<{
+    isValid: boolean
+    blockedBy?: string[]
+    suggestedAlternative?: Position
+  }> {
+    // Get features that block movement
+    const features = await prisma.locationFeature.findMany({
+      where: {
+        locationId,
+        blocksMovement: true,
+      },
+    })
+
+    const blockedBy: string[] = []
+
+    // Check if line path intersects any blocking features
+    for (const feature of features) {
+      if (this.lineIntersectsBox(from, to, feature)) {
+        blockedBy.push(feature.name)
+      }
+    }
+
+    if (blockedBy.length > 0) {
+      return {
+        isValid: false,
+        blockedBy,
+        // TODO: In Phase 3, calculate suggested alternative path around obstacles
+      }
+    }
+
+    return {
+      isValid: true,
+    }
+  }
+
+  /**
+   * Check if a position intersects with a feature's bounding box
+   */
+  private positionIntersectsFeature(
+    position: Position,
+    feature: {
+      x: number
+      y: number
+      z: number
+      width: number | null
+      height: number | null
+      depth: number | null
+    }
+  ): boolean {
+    const width = feature.width || 0
+    const height = feature.height || 0
+    const depth = feature.depth || 0
+
+    return (
+      position.x >= feature.x &&
+      position.x <= feature.x + width &&
+      position.y >= feature.y &&
+      position.y <= feature.y + depth &&
+      position.z >= feature.z &&
+      position.z <= feature.z + height
+    )
+  }
+
+  /**
+   * Find nearest valid position to a target position (if target is blocked)
+   */
+  async findNearestValidPosition(
+    targetPosition: Position,
+    locationId: string,
+    searchRadius: number = 2
+  ): Promise<Position | null> {
+    // Get blocking features
+    const features = await prisma.locationFeature.findMany({
+      where: {
+        locationId,
+        blocksMovement: true,
+      },
+    })
+
+    // Try positions in a spiral pattern around target
+    const steps = 8 // Check 8 directions
+    for (let radius = 0.5; radius <= searchRadius; radius += 0.5) {
+      for (let i = 0; i < steps; i++) {
+        const angle = (i / steps) * 2 * Math.PI
+        const testPos: Position = {
+          x: targetPosition.x + Math.cos(angle) * radius,
+          y: targetPosition.y + Math.sin(angle) * radius,
+          z: targetPosition.z,
+        }
+
+        // Check if this position is clear
+        const isBlocked = features.some(f => this.positionIntersectsFeature(testPos, f))
+        if (!isBlocked) {
+          return testPos
+        }
+      }
+    }
+
+    return null // No valid position found within search radius
+  }
 }
 
 export const spatialService = new SpatialService()

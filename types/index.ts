@@ -56,6 +56,7 @@ export type AIResponse = {
     model: string
     promptTokens: number
     completionTokens: number
+    movementSuggestion?: MovementSuggestion
   }
 }
 
@@ -188,10 +189,42 @@ export type SpatialAIContext = {
 }
 
 export type MovementSuggestion = {
-  fromPosition: Position3D
-  toPosition: Position3D
-  reason: string
+  id: string // Unique ID for this suggestion
+  characterId: string
+  characterName: string
+  from: Position3D
+  to: Position3D
+  reason: string // "To attack orc" or "To investigate altar"
   targetName?: string
+  actionType: 'MELEE' | 'RANGED' | 'SPELL' | 'CONVERSATION' | 'PERCEPTION' | 'CUSTOM' | 'MOVEMENT'
   distance: number
+  locationId: string
+  isValid: boolean
+  validationIssues?: string[]
+}
+
+export type MovementIntent = {
+  detected: boolean
+  actionType?: 'MELEE' | 'RANGED' | 'SPELL' | 'CONVERSATION' | 'PERCEPTION' | 'CUSTOM' | 'MOVEMENT'
+  targetName?: string
+  targetType?: 'character' | 'feature' | 'location' | 'coordinates'
+  keywords?: string[]
+}
+
+export type MovementValidationResult = {
+  isValid: boolean
+  blockedBy?: string[]
+  suggestedAlternative?: Position3D
+  warnings?: string[]
+}
+
+export type MovementEvent = {
+  type: 'movement'
+  characterId: string
+  characterName: string
+  from: Position3D
+  to: Position3D
+  reason: string
+  timestamp: string
 }
 

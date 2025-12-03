@@ -139,6 +139,7 @@ export class OpenAIService {
 
   /**
    * Generate story response using enhanced context (optimized for cost)
+   * Now includes structured movement detection
    */
   async generateEnhancedStoryResponse(
     userInput: string,
@@ -148,6 +149,7 @@ export class OpenAIService {
     const messages = this.buildEnhancedMessageHistory(context, userInput)
 
     try {
+      // Use JSON mode for structured output with movement detection
       const completion = await openai.chat.completions.create({
         model: MODEL,
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
@@ -155,24 +157,82 @@ export class OpenAIService {
         temperature: 0.8,
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
+        response_format: { type: 'json_object' },
       })
 
       const content = completion.choices[0]?.message?.content || ''
       const usage = completion.usage
 
+      // Parse JSON response
+      let parsedResponse: {
+        narrative: string
+        movement?: {
+          detected: boolean
+          characterName?: string
+          targetName?: string
+          targetPosition?: { x: number; y: number; z: number }
+          actionType?: string
+          reason?: string
+        }
+      }
+
+      try {
+        parsedResponse = JSON.parse(content)
+      } catch {
+        // Fallback if JSON parsing fails
+        parsedResponse = { narrative: content }
+      }
+
+      // Build movement suggestion if detected
+      let movementSuggestion = undefined
+      if (parsedResponse.movement?.detected && parsedResponse.movement.targetPosition) {
+        const mov = parsedResponse.movement
+        movementSuggestion = {
+          id: `mov_${Date.now()}`,
+          characterId: context.spatialContext?.characterPosition ? 'player' : '',
+          characterName: mov.characterName || 'Player',
+          from: context.spatialContext?.characterPosition || { x: 0, y: 0, z: 0 },
+          to: mov.targetPosition,
+          reason: mov.reason || 'Movement detected',
+          targetName: mov.targetName,
+          actionType: (mov.actionType || 'MOVEMENT') as any,
+          distance: this.calculateDistance(
+            context.spatialContext?.characterPosition || { x: 0, y: 0, z: 0 },
+            mov.targetPosition
+          ),
+          locationId: context.currentState?.locationId || '',
+          isValid: true, // Will be validated separately
+          validationIssues: [],
+        }
+      }
+
       return {
-        content,
+        content: parsedResponse.narrative,
         tokenCount: usage?.total_tokens || 0,
         metadata: {
           model: MODEL,
           promptTokens: usage?.prompt_tokens || 0,
           completionTokens: usage?.completion_tokens || 0,
+          movementSuggestion,
         },
       }
     } catch (error) {
       console.error('OpenAI API error:', error)
       throw new Error('Failed to generate AI response')
     }
+  }
+
+  /**
+   * Helper to calculate distance between positions
+   */
+  private calculateDistance(
+    pos1: { x: number; y: number; z: number },
+    pos2: { x: number; y: number; z: number }
+  ): number {
+    const dx = pos2.x - pos1.x
+    const dy = pos2.y - pos1.y
+    const dz = pos2.z - pos1.z
+    return Math.sqrt(dx * dx + dy * dy + dz * dz)
   }
 
   /**
@@ -271,7 +331,37 @@ export class OpenAIService {
     prompt += `- React to player actions naturally\n`
     prompt += `- Request dice rolls when appropriate\n`
     prompt += `- Stay consistent with established facts\n`
-    prompt += `- Keep responses concise (2-3 paragraphs)\n`
+    prompt += `- Keep responses concise (2-3 paragraphs)\n\n`
+
+    // Movement detection instructions
+    prompt += `IMPORTANT: You MUST respond in JSON format with this structure:\n`
+    prompt += `{\n`
+    prompt += `  "narrative": "Your story response here",\n`
+    prompt += `  "movement": {\n`
+    prompt += `    "detected": false,  // Set to true if player indicates they want to move\n`
+    prompt += `    "characterName": "Player",\n`
+    prompt += `    "targetName": "orc",  // Name of target character/feature\n`
+    prompt += `    "targetPosition": {"x": 15.5, "y": 14.0, "z": 0.0},  // Calculate based on spatial context\n`
+    prompt += `    "actionType": "MELEE",  // MELEE, RANGED, SPELL, CONVERSATION, PERCEPTION, or MOVEMENT\n`
+    prompt += `    "reason": "To attack the orc"  // Why they're moving\n`
+    prompt += `  }\n`
+    prompt += `}\n\n`
+    prompt += `Movement Keywords to Watch For:\n`
+    prompt += `- Approach, move to, walk to, go to, head to\n`
+    prompt += `- Charge, rush, attack (close distance for melee)\n`
+    prompt += `- Flee, retreat, back away (move away)\n`
+    prompt += `- Investigate, examine, inspect (move closer to feature)\n`
+    prompt += `- Talk to, speak to (move to conversation range)\n\n`
+    prompt += `When movement is detected:\n`
+    prompt += `1. Set "detected" to true\n`
+    prompt += `2. Identify the target from the spatial context\n`
+    prompt += `3. Calculate appropriate position based on action type:\n`
+    prompt += `   - MELEE: 1.5 meters from target\n`
+    prompt += `   - RANGED: 10-18 meters from target\n`
+    prompt += `   - SPELL: 5-9 meters from target\n`
+    prompt += `   - CONVERSATION: 2-6 meters from target\n`
+    prompt += `   - PERCEPTION: Close to feature for investigation\n`
+    prompt += `4. Include the reason for movement\n\n`
 
     return prompt
   }

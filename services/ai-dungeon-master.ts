@@ -53,6 +53,29 @@ export class AIDungeonMasterService {
       enhancedContext
     )
 
+    // Validate movement suggestion if present
+    if (aiResponse.metadata?.movementSuggestion) {
+      const suggestion = aiResponse.metadata.movementSuggestion
+      const { spatialService } = await import('./spatial-service')
+      
+      // Validate the suggested movement
+      const validation = await spatialService.validateMovement(
+        suggestion.from,
+        suggestion.to,
+        suggestion.locationId
+      )
+
+      // Update the suggestion with validation results
+      suggestion.isValid = validation.isValid
+      suggestion.validationIssues = validation.warnings
+      if (validation.blockedBy) {
+        suggestion.validationIssues = [
+          ...(suggestion.validationIssues || []),
+          `Blocked by: ${validation.blockedBy.join(', ')}`
+        ]
+      }
+    }
+
     // Save user message
     await prisma.message.create({
       data: {
