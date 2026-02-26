@@ -5,7 +5,9 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import CreateSessionModal from '@/components/CreateSessionModal'
 import CreateCharacterModal from '@/components/CreateCharacterModal'
+import EditCharacterModal from '@/components/EditCharacterModal'
 import CampaignAnalytics from '@/components/CampaignAnalytics'
+import KnowledgeBaseManager from '@/components/KnowledgeBaseManager'
 
 type Campaign = {
   id: string
@@ -38,7 +40,9 @@ export default function CampaignDetailPage({
   const [loading, setLoading] = useState(true)
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [showCharacterModal, setShowCharacterModal] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'costs'>('overview')
+  const [editingCharacter, setEditingCharacter] = useState<Campaign['characters'][0] | null>(null)
+  const [deletingCharacterId, setDeletingCharacterId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'costs' | 'knowledge'>('overview')
 
   useEffect(() => {
     fetchCampaign()
@@ -53,6 +57,27 @@ export default function CampaignDetailPage({
       console.error('Failed to fetch campaign:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteCharacter = async (characterId: string) => {
+    if (!confirm('Are you sure you want to delete this character? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/characters/${characterId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete character')
+      }
+
+      fetchCampaign()
+    } catch (error) {
+      console.error('Failed to delete character:', error)
+      alert('Failed to delete character. Please try again.')
     }
   }
 
@@ -119,6 +144,16 @@ export default function CampaignDetailPage({
               Overview
             </button>
             <button
+              onClick={() => setActiveTab('knowledge')}
+              className={`pb-4 px-2 font-medium transition-colors ${
+                activeTab === 'knowledge'
+                  ? 'text-purple-400 border-b-2 border-purple-400'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Knowledge Base
+            </button>
+            <button
               onClick={() => setActiveTab('costs')}
               className={`pb-4 px-2 font-medium transition-colors ${
                 activeTab === 'costs'
@@ -180,13 +215,33 @@ export default function CampaignDetailPage({
               ) : (
                 <div className="space-y-3">
                   {campaign.characters.map(character => (
-                    <div key={character.id} className="bg-gray-800 rounded-lg p-4">
+                    <div key={character.id} className="bg-gray-800 rounded-lg p-4 relative group">
                       <h3 className="text-lg font-semibold text-white">{character.name}</h3>
                       <p className="text-sm text-gray-400">
                         {character.race && `${character.race} `}
                         {character.class && `${character.class} `}
                         Level {character.level}
                       </p>
+                      <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setEditingCharacter(character)}
+                          className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                          title="Edit character"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCharacter(character.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                          title="Delete character"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -198,6 +253,12 @@ export default function CampaignDetailPage({
         {activeTab === 'costs' && (
           <div>
             <CampaignAnalytics campaignId={campaign.id} />
+          </div>
+        )}
+
+        {activeTab === 'knowledge' && (
+          <div>
+            <KnowledgeBaseManager campaignId={campaign.id} />
           </div>
         )}
       </div>
@@ -219,6 +280,17 @@ export default function CampaignDetailPage({
           onClose={() => setShowCharacterModal(false)}
           onSuccess={() => {
             setShowCharacterModal(false)
+            fetchCampaign()
+          }}
+        />
+      )}
+
+      {editingCharacter && (
+        <EditCharacterModal
+          character={editingCharacter}
+          onClose={() => setEditingCharacter(null)}
+          onSuccess={() => {
+            setEditingCharacter(null)
             fetchCampaign()
           }}
         />

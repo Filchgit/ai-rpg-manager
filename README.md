@@ -18,13 +18,26 @@ This is a **showcase project** demonstrating:
 
 ## ✨ Features
 
-### Core Functionality
+### Fully Implemented (UI + Backend)
 
-- **Campaign Management** - Create and manage multiple RPG campaigns with custom world settings
-- **AI Dungeon Master** - GPT-powered storytelling that responds to player actions
-- **Session Tracking** - Maintain conversation history and session state
-- **Character Management** - Create and track characters with stats and backstories
-- **Rate Limiting** - Built-in cost controls to prevent excessive API usage
+- ✅ **Campaign Management** - Create, view, edit, and delete RPG campaigns with custom world settings
+- ✅ **AI Dungeon Master** - GPT-powered storytelling with context-aware responses
+- ✅ **Session Tracking** - Interactive chat interface with full conversation history
+- ✅ **Cost Analytics** - Real-time cost tracking and campaign-level analytics dashboard
+- ✅ **Character Creation** - Add characters with stats, backstory, and movement capabilities
+
+### Advanced Features (Backend Complete, UI In Development)
+
+- 🔧 **3D Spatial Location System** - Track character positions in 3D space with distance-based interactions
+  - Line of sight calculations
+  - Cover system (D&D 5e compatible)
+  - Movement validation and AI-suggested movements
+  - Turn-based movement with modifiers
+  - See [Spatial System Documentation](docs/SPATIAL_SYSTEM.md)
+- 🔧 **Knowledge Base Management** - Store and query campaign lore, NPCs, locations, and world facts
+- 🔧 **Tone Profiles** - Dynamic AI response style based on context
+- 🔧 **Mechanics Rules** - Context-aware game mechanics integration
+- 🔧 **Character Editing** - Full character lifecycle management
 
 ### Technical Highlights
 
@@ -34,6 +47,7 @@ This is a **showcase project** demonstrating:
 - **Database-Backed** - PostgreSQL with Prisma ORM
 - **Comprehensive Testing** - Unit, integration, and E2E tests
 - **Production-Ready** - Error handling, validation, and monitoring
+- **Cost Optimization** - 50-60% token reduction through intelligent context management
 
 ## 🚀 Quick Start
 
@@ -184,6 +198,9 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 
 - [Architecture Overview](docs/ARCHITECTURE.md) - System design and decisions
 - [Deployment Guide](docs/DEPLOYMENT.md) - Step-by-step deployment instructions
+- [Spatial Location System](docs/SPATIAL_SYSTEM.md) - 3D positioning and movement mechanics
+- [Cost Optimization](docs/COST_OPTIMIZATION.md) - AI cost reduction strategies
+- [Movement Detection Testing](docs/MOVEMENT_DETECTION_TESTING.md) - Testing AI movement suggestions
 
 ## 🔐 Security
 
@@ -230,6 +247,30 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
 - Feature branches - New development
 - Pull requests required for main
 - Automated CI on all PRs
+
+## 🗺️ Roadmap
+
+### In Progress
+
+- **Spatial System UI Components** - Visual map viewer, movement confirmation dialogs, location editor
+- **Knowledge Base UI Integration** - Add knowledge management interface to campaign pages
+- **Character Management Completion** - Edit and delete character functionality
+- **Rate Limiting Visibility** - UI indicators for API rate limit status
+
+### Planned Enhancements
+
+- **User Authentication** - Role-based access (Administrator, Dungeon Master, Player)
+- **Pathfinding** - Automatic route calculation around obstacles
+- **Visual Map Editor** - Drag-and-drop location and feature creation
+- **Image Generation** - DALL-E integration for scene visualization
+- **Real-time Collaboration** - Multiple players in the same session
+- **Campaign Sharing** - Public campaign templates and sharing
+
+### Technical Debt
+
+- Complete E2E test coverage for spatial system
+- Add automated tests for UI components
+- Implement vector embeddings for semantic knowledge search
 
 ## 🤝 Contributing
 

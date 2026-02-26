@@ -4,6 +4,7 @@ import { use, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import SessionCostDashboard from '@/components/SessionCostDashboard'
+import RateLimitIndicator from '@/components/RateLimitIndicator'
 
 type Message = {
   id: string
@@ -31,6 +32,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [showCosts, setShowCosts] = useState(false)
+  const [showRateLimit, setShowRateLimit] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -158,18 +160,33 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
               <h1 className="text-2xl font-bold text-white">{session.name}</h1>
               <p className="text-sm text-gray-400">Status: {session.status}</p>
             </div>
-            <button
-              onClick={() => setShowCosts(!showCosts)}
-              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
-            >
-              {showCosts ? 'Hide Costs' : 'Show Costs'}
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowRateLimit(!showRateLimit)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+              >
+                {showRateLimit ? 'Hide Rate Limit' : 'Show Rate Limit'}
+              </button>
+              <button
+                onClick={() => setShowCosts(!showCosts)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+              >
+                {showCosts ? 'Hide Costs' : 'Show Costs'}
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Rate Limit Dashboard */}
+        {showRateLimit && (
+          <div className="mb-4">
+            <RateLimitIndicator sessionId={session.id} />
+          </div>
+        )}
+
         {/* Cost Dashboard */}
         {showCosts && (
-          <div className="bg-gray-800 rounded-lg p-4 mb-4">
+          <div className="mb-4">
             <SessionCostDashboard sessionId={session.id} />
           </div>
         )}

@@ -228,16 +228,54 @@ export class ContextBuilderService {
     knowledge.forEach((item) => {
       let score = 0
 
-      // Check if title matches
-      if (userInputLower.includes(item.title.toLowerCase())) {
-        score += 10
-      }
+      // Check if title matches (partial match)
+      const titleWords = item.title.toLowerCase().split(/\s+/)
+      titleWords.forEach((word: string) => {
+        if (word.length > 3 && userInputLower.includes(word)) {
+          score += 8
+        }
+      })
 
       // Check if keywords match
       if (item.keywords && Array.isArray(item.keywords)) {
         item.keywords.forEach((keyword: string) => {
-          if (userInputLower.includes(keyword.toLowerCase())) {
-            score += 5
+          const keywordLower = keyword.toLowerCase()
+          if (userInputLower.includes(keywordLower)) {
+            score += 10
+          }
+          // Also check if user input contains words from multi-word keywords
+          const keywordWords = keywordLower.split(/\s+/)
+          keywordWords.forEach((word: string) => {
+            if (word.length > 3 && userInputLower.includes(word)) {
+              score += 3
+            }
+          })
+        })
+      }
+
+      // Check if category name matches user input (e.g., "god" matches "LORE", "npc" matches "NPC")
+      const categoryMatches: Record<string, string[]> = {
+        LORE: ['lore', 'legend', 'myth', 'story', 'history', 'religion', 'god', 'deity', 'divine'],
+        NPC: ['npc', 'character', 'person', 'who', 'meet'],
+        LOCATION: ['location', 'place', 'where', 'area', 'region'],
+        ITEM: ['item', 'object', 'thing', 'artifact', 'treasure'],
+        FACTION: ['faction', 'guild', 'organization', 'group', 'alliance'],
+        QUEST: ['quest', 'mission', 'task', 'objective'],
+      }
+
+      const categoryKeywords = categoryMatches[item.category] || []
+      categoryKeywords.forEach((keyword) => {
+        if (userInputLower.includes(keyword)) {
+          score += 7
+        }
+      })
+
+      // Check content for relevant terms (but with lower score to avoid false positives)
+      if (item.content) {
+        const contentWords = item.content.toLowerCase().split(/\s+/)
+        contentWords.forEach((word: string) => {
+          if (word.length > 4 && userInputLower.includes(word)) {
+            score += 1
           }
         })
       }
@@ -248,14 +286,14 @@ export class ContextBuilderService {
         item.category === 'LOCATION' &&
         item.title.toLowerCase() === currentState.currentLocation.toLowerCase()
       ) {
-        score += 15
+        score += 20
       }
 
       // Check if it matches active NPCs
       if (currentState?.activeNPCs && item.category === 'NPC') {
         currentState.activeNPCs.forEach((npc) => {
           if (item.title.toLowerCase().includes(npc.toLowerCase())) {
-            score += 12
+            score += 15
           }
         })
       }

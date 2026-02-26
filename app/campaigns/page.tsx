@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCampaigns()
@@ -30,9 +31,21 @@ export default function CampaignsPage() {
     try {
       const response = await fetch('/api/campaigns')
       const data = await response.json()
-      setCampaigns(data)
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to fetch campaigns')
+      }
+      
+      if (Array.isArray(data)) {
+        setCampaigns(data)
+        setError(null)
+      } else {
+        throw new Error('Invalid response format')
+      }
     } catch (error) {
       console.error('Failed to fetch campaigns:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch campaigns')
+      setCampaigns([])
     } finally {
       setLoading(false)
     }
@@ -63,6 +76,25 @@ export default function CampaignsPage() {
 
         {loading ? (
           <div className="text-center text-gray-400 py-12">Loading campaigns...</div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-400 mb-4">Error: {error}</p>
+            <p className="text-gray-400 mb-4 text-sm">
+              This usually means there's a database connection issue.
+              <br />
+              Check that your database is running and the DATABASE_URL is set correctly.
+            </p>
+            <button
+              onClick={() => {
+                setError(null)
+                setLoading(true)
+                fetchCampaigns()
+              }}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         ) : campaigns.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-400 mb-4">No campaigns yet. Create your first campaign!</p>

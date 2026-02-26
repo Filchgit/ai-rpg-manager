@@ -1,8 +1,20 @@
 import OpenAI from 'openai'
 import { AIResponse, AIPromptContext, EnhancedAIContext } from '@/types'
+import https from 'https'
+
+// For development: if SSL verification is causing issues, you can disable it
+// WARNING: Only use this in development, never in production
+const httpAgent = process.env.DISABLE_SSL_VERIFY === 'true'
+  ? new https.Agent({ rejectUnauthorized: false })
+  : undefined
+
+if (httpAgent) {
+  console.log('⚠️  SSL certificate verification disabled for OpenAI API (development only)')
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
+  httpAgent: httpAgent as any,
 })
 
 const MAX_TOKENS_PER_REQUEST = parseInt(process.env.MAX_TOKENS_PER_REQUEST || '500', 10)
