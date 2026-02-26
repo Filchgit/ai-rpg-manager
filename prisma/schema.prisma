@@ -46,6 +46,8 @@ model Session {
   messages    Message[]
   state       SessionState?
   summaries   SessionSummary[]
+  diceRolls   DiceRollLog[]
+  combatSessions CombatSession[]
   
   @@index([campaignId])
   @@index([status])
@@ -77,6 +79,8 @@ model Character {
   
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   position    CharacterPosition?
+  diceRolls   DiceRollLog[]
+  combatants  Combatant[]
   
   @@index([campaignId])
 }
@@ -100,6 +104,100 @@ enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
+}
+
+model DiceRollLog {
+  id          String   @id @default(cuid())
+  sessionId   String
+  characterId String?
+  rollType    String   // "attack", "damage", "skill_check", "saving_throw", "initiative", "custom"
+  formula     String   // Original formula (e.g., "1d20+5")
+  result      Int      // Final total
+  breakdown   Json     // Detailed roll breakdown (rolls, modifiers, kept/dropped)
+  triggeredBy String?  // "AI", "Player", "DM", "System"
+  metadata    Json?    // Additional context (target, action name, etc.)
+  createdAt   DateTime @default(now())
+  
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  character   Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  combatLogEntries CombatLogEntry[]
+  
+  @@index([sessionId])
+  @@index([characterId])
+  @@index([rollType])
+  @@index([createdAt])
+}
+
+model CombatSession {
+  id              String        @id @default(cuid())
+  sessionId       String
+  status          CombatStatus  @default(ACTIVE)
+  currentTurn     Int           @default(0)
+  currentRound    Int           @default(1)
+  initiativeOrder Json          // Array of combatant IDs in initiative order
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  endedAt         DateTime?
+  
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  combatants      Combatant[]
+  combatLog       CombatLogEntry[]
+  
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum CombatStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model Combatant {
+  id              String        @id @default(cuid())
+  combatSessionId String
+  characterId     String?       // Null for NPCs/monsters not in Character table
+  name            String
+  initiative      Int
+  currentHP       Int
+  maxHP           Int
+  tempHP          Int           @default(0)
+  armorClass      Int           @default(10)
+  conditions      Json          @default("[]") // Array of condition strings
+  isPlayer        Boolean       @default(false)
+  isActive        Boolean       @default(true) // false if dead/fled
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  combatSession   CombatSession @relation(fields: [combatSessionId], references: [id], onDelete: Cascade)
+  character       Character?    @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  
+  @@index([combatSessionId])
+  @@index([characterId])
+  @@index([initiative])
+}
+
+model CombatLogEntry {
+  id              String        @id @default(cuid())
+  combatSessionId String
+  round           Int
+  turn            Int
+  combatantId     String?
+  combatantName   String?       // Store name for history (in case combatant deleted)
+  action          String        // "attack", "damage", "heal", "condition_add", "condition_remove", "death", etc.
+  description     String        @db.Text
+  diceRollId      String?
+  metadata        Json?         // Additional data (damage amount, target, etc.)
+  createdAt       DateTime      @default(now())
+  
+  combatSession   CombatSession @relation(fields: [combatSessionId], references: [id], onDelete: Cascade)
+  diceRoll        DiceRollLog?  @relation(fields: [diceRollId], references: [id], onDelete: SetNull)
+  
+  @@index([combatSessionId])
+  @@index([round])
+  @@index([createdAt])
 }
 
 model RateLimit {
